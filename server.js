@@ -1,14 +1,13 @@
 import express from "express";
 import cors from "cors";
 import pkg from "pg";
-
 const { Pool } = pkg;
-const app = express();
 
+const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔧 Variables de entorno
+// ⚙️ Variables de entorno
 const PORT = process.env.PORT || 3000;
 
 // 💾 Conexión PostgreSQL
@@ -21,13 +20,7 @@ const pool = new Pool({
   ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: false } : false,
 });
 
-// 🧠 Log de todas las solicitudes
-app.use((req, res, next) => {
-  console.log(`🔍 Request: ${req.method} ${req.url}`);
-  next();
-});
-
-// 🧩 Crear tablas si no existen
+// ✅ Crear tablas si no existen
 async function ensureTables() {
   const client = await pool.connect();
   try {
@@ -56,17 +49,7 @@ async function ensureTables() {
   }
 }
 
-// 🏠 Ruta raíz
-app.get("/", (req, res) => {
-  res.json({ status: "✅ Servidor Express base funcionando correctamente" });
-});
-
-// 🔁 Ruta de prueba
-app.get("/ping", (req, res) => {
-  res.json({ status: "✅ Servidor activo y corriendo perfectamente" });
-});
-
-// 📩 Crear conversación
+// 🧩 Crear conversación
 app.post("/api/conversations", async (req, res) => {
   const { title } = req.body;
   try {
@@ -81,7 +64,7 @@ app.post("/api/conversations", async (req, res) => {
   }
 });
 
-// 💬 Guardar mensaje
+// 🧩 Guardar mensaje
 app.post("/api/messages", async (req, res) => {
   const { conversation_id, role, content } = req.body;
   try {
@@ -96,7 +79,7 @@ app.post("/api/messages", async (req, res) => {
   }
 });
 
-// 📚 Obtener mensajes por conversación
+// 🧩 Obtener mensajes
 app.get("/api/messages/:conversation_id", async (req, res) => {
   const { conversation_id } = req.params;
   try {
@@ -111,11 +94,13 @@ app.get("/api/messages/:conversation_id", async (req, res) => {
   }
 });
 
+// 🟢 Endpoint de prueba
+app.get("/ping", (req, res) => {
+  res.json({ status: "✅ Servidor activo y corriendo perfectamente" });
+});
+
 // 🚀 Iniciar servidor
 app.listen(PORT, async () => {
   await ensureTables();
   console.log(`✅ Servidor corriendo en puerto ${PORT}`);
-
-  // Mantener vivo el servidor (para EasyPanel)
-  setInterval(() => console.log("⏳ Manteniendo servidor activo..."), 60000);
 });
