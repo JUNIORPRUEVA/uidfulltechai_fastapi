@@ -1,6 +1,7 @@
 {
   "name": "uidfulltechai_fastapi",
   "version": "1.0.0",
+  "description": "API IA Fulltech con conexión PostgreSQL y memoria persistente",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -9,6 +10,7 @@
   "dependencies": {
     "express": "^4.19.2",
     "pg": "^8.11.3",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "cors": "^2.8.5"
   }
 }
