@@ -1,13 +1,13 @@
 {
-  "name": "fulltech_api",
+  "name": "uidfulltechai_fastapi",
   "version": "1.0.0",
-  "description": "API Fulltech para conectar Flutter con PostgreSQL (EasyPanel)",
+  "description": "API de memoria persistente para Fulltech AI con PostgreSQL interno (EasyPanel).",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.19.2",
+    "express": "^4.18.2",
     "pg": "^8.11.3",
     "dotenv": "^16.4.5",
     "cors": "^2.8.5"
