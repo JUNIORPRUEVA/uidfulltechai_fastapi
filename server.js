@@ -1,40 +1,40 @@
 import express from "express";
+import cors from "cors";
 import pkg from "pg";
 import dotenv from "dotenv";
-import cors from "cors";
 
 dotenv.config();
 const { Pool } = pkg;
+
 const app = express();
-
-app.use(cors());
 app.use(express.json());
+app.use(cors());
 
-// 🧠 Configuración interna del PostgreSQL
-const pool = new Pool({
-  host: process.env.PGHOST || "postgresql_postgres-n8n",
-  port: process.env.PGPORT || 5432,
-  database: process.env.PGDATABASE || "uid_dbjunioridigital",
-  user: process.env.PGUSER || "n8n_user",
-  password: process.env.PGPASSWORD || "Ayleen10.yahaira",
-  ssl: process.env.USE_SSL === "true" ? { rejectUnauthorized: false } : false
-});
-
-// 🚦 Endpoint raíz
+// ✅ Verificación de conexión
 app.get("/", (req, res) => {
-  res.send("🚀 API FulltechAI corriendo dentro de EasyPanel con PostgreSQL interno");
+  res.send("🚀 Servidor FulltechAI activo y corriendo correctamente.");
 });
 
-// 💾 Endpoint para probar conexión a PostgreSQL
+// 🔗 Configuración de conexión PostgreSQL
+const pool = new Pool({
+  host: process.env.PGHOST,
+  port: process.env.PGPORT,
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  database: process.env.PGDATABASE,
+  ssl: process.env.USE_SSL === "true"
+});
+
+// 🧠 Endpoint para probar conexión
 app.get("/test-db", async (req, res) => {
   try {
     const result = await pool.query("SELECT NOW()");
-    res.json({ status: "✅ Conectado correctamente a PostgreSQL", now: result.rows[0] });
-  } catch (error) {
-    console.error("❌ Error conectando a PostgreSQL:", error.message);
-    res.status(500).json({ error: error.message });
+    res.json({ ok: true, time: result.rows[0] });
+  } catch (err) {
+    console.error("❌ Error de conexión:", err);
+    res.status(500).json({ ok: false, error: err.message });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Servidor API corriendo en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`✅ Servidor corriendo en puerto ${PORT}`));
