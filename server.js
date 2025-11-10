@@ -1,4 +1,3 @@
-// server.js
 import express from "express";
 import cors from "cors";
 import pkg from "pg";
@@ -9,31 +8,31 @@ app.use(cors());
 app.use(express.json());
 
 // ⚙️ Variables de entorno
-const PORT = process.env.PORT || 80;
+const PORT = process.env.PORT || 3000;
 
-// 💾 Conexión con PostgreSQL (desde variables del entorno)
+// 💾 Conexión con PostgreSQL (usando variables de entorno)
 const pool = new Pool({
   host: process.env.PGHOST,
-  port: process.env.PGPORT,
+  port: Number(process.env.PGPORT),
   database: process.env.PGDATABASE,
   user: process.env.PGUSER,
   password: process.env.PGPASSWORD,
-  ssl: process.env.PGSSL === "true"
+  ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: false } : false,
 });
 
-// ✅ Inicializar tablas si no existen
+// ✅ Crear tablas si no existen
 async function ensureTables() {
   const client = await pool.connect();
   try {
     await client.query(`
+      CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
       CREATE TABLE IF NOT EXISTS fulltechuiconversation (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         title TEXT DEFAULT 'Conversación Fulltech',
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
-    `);
 
-    await client.query(`
       CREATE TABLE IF NOT EXISTS fulltechuimensage (
         id BIGSERIAL PRIMARY KEY,
         conversation_id UUID REFERENCES fulltechuiconversation(id) ON DELETE CASCADE,
@@ -42,10 +41,9 @@ async function ensureTables() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-
     console.log("✅ Tablas verificadas correctamente.");
   } catch (err) {
-    console.error("❌ Error al verificar/crear tablas:", err);
+    console.error("❌ Error al crear/verificar tablas:", err);
   } finally {
     client.release();
   }
@@ -96,14 +94,14 @@ app.get("/api/messages/:conversation_id", async (req, res) => {
   }
 });
 
-// 🟢 Ruta de prueba para confirmar que el servidor está activo
-app.get('/ping', (req, res) => {
-  res.json({ status: '✅ Servidor activo y corriendo perfectamente' });
+// 🟢 Ruta de prueba
+app.get("/ping", (req, res) => {
+  res.json({ status: "✅ Servidor activo y corriendo perfectamente" });
 });
-
 
 // 🚀 Iniciar servidor
 app.listen(PORT, async () => {
   await ensureTables();
   console.log(`✅ Servidor corriendo en puerto ${PORT}`);
+  setInterval(() => console.log("⏳ Manteniendo servidor activo..."), 60000);
 });
