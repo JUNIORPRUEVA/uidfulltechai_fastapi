@@ -96,6 +96,12 @@ app.get("/api/messages/:conversation_id", async (req, res) => {
   }
 });
 
+// 🟢 Ruta de prueba para confirmar que el servidor está activo
+app.get('/ping', (req, res) => {
+  res.json({ status: '✅ Servidor activo y corriendo perfectamente' });
+});
+
+
 // 🚀 Iniciar servidor
 app.listen(PORT, async () => {
   await ensureTables();
