@@ -7,10 +7,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ⚙️ Variables de entorno
 const PORT = process.env.PORT || 3000;
 
-// 💾 Conexión PostgreSQL
 const pool = new Pool({
   host: process.env.PGHOST,
   port: Number(process.env.PGPORT),
@@ -20,7 +18,6 @@ const pool = new Pool({
   ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: false } : false,
 });
 
-// ✅ Crear tablas si no existen
 async function ensureTables() {
   const client = await pool.connect();
   try {
@@ -49,7 +46,6 @@ async function ensureTables() {
   }
 }
 
-// 🧩 Crear conversación
 app.post("/api/conversations", async (req, res) => {
   const { title } = req.body;
   try {
@@ -64,7 +60,6 @@ app.post("/api/conversations", async (req, res) => {
   }
 });
 
-// 🧩 Guardar mensaje
 app.post("/api/messages", async (req, res) => {
   const { conversation_id, role, content } = req.body;
   try {
@@ -79,7 +74,6 @@ app.post("/api/messages", async (req, res) => {
   }
 });
 
-// 🧩 Obtener mensajes
 app.get("/api/messages/:conversation_id", async (req, res) => {
   const { conversation_id } = req.params;
   try {
@@ -94,12 +88,10 @@ app.get("/api/messages/:conversation_id", async (req, res) => {
   }
 });
 
-// 🟢 Endpoint de prueba
 app.get("/ping", (req, res) => {
   res.json({ status: "✅ Servidor activo y corriendo perfectamente" });
 });
 
-// 🚀 Iniciar servidor
 app.listen(PORT, async () => {
   await ensureTables();
   console.log(`✅ Servidor corriendo en puerto ${PORT}`);
