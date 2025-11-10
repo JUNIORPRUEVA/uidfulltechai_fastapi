@@ -1,99 +1,103 @@
+// server.js
 import express from "express";
 import cors from "cors";
 import pkg from "pg";
-import dotenv from "dotenv";
-
-dotenv.config();
 const { Pool } = pkg;
 
 const app = express();
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
 
-// 📡 Conexión a PostgreSQL
+// ⚙️ Variables de entorno
+const PORT = process.env.PORT || 80;
+
+// 💾 Conexión con PostgreSQL (desde variables del entorno)
 const pool = new Pool({
   host: process.env.PGHOST,
   port: process.env.PGPORT,
+  database: process.env.PGDATABASE,
   user: process.env.PGUSER,
   password: process.env.PGPASSWORD,
-  database: process.env.PGDATABASE,
-  ssl: process.env.USE_SSL === "true",
+  ssl: process.env.PGSSL === "true"
 });
 
-// 🧠 Endpoint de estado base
-app.get("/", (req, res) => {
-  res.json({ ok: true, msg: "🚀 API Fulltech AI corriendo correctamente" });
-});
-
-// 📘 Crear tabla si no existe
+// ✅ Inicializar tablas si no existen
 async function ensureTables() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS conversations (
-      id SERIAL PRIMARY KEY,
-      conversation_id VARCHAR(50),
-      role VARCHAR(10),
-      content TEXT,
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-  `);
-  console.log("✅ Tabla 'conversations' lista");
-}
-ensureTables();
-
-// 🧩 Guardar mensaje (memoria persistente)
-app.post("/memory/save", async (req, res) => {
-  const { conversation_id, role, content } = req.body;
-  if (!conversation_id || !role || !content) {
-    return res.status(400).json({ error: "Datos incompletos" });
-  }
-
+  const client = await pool.connect();
   try {
-    await pool.query(
-      `INSERT INTO conversations (conversation_id, role, content)
-       VALUES ($1, $2, $3)`,
-      [conversation_id, role, content]
-    );
-    res.json({ ok: true, msg: "💾 Mensaje guardado correctamente" });
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS fulltechuiconversation (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title TEXT DEFAULT 'Conversación Fulltech',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS fulltechuimensage (
+        id BIGSERIAL PRIMARY KEY,
+        conversation_id UUID REFERENCES fulltechuiconversation(id) ON DELETE CASCADE,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    console.log("✅ Tablas verificadas correctamente.");
   } catch (err) {
-    console.error("❌ Error al guardar mensaje:", err);
-    res.status(500).json({ error: err.message });
+    console.error("❌ Error al verificar/crear tablas:", err);
+  } finally {
+    client.release();
   }
-});
+}
 
-// 📖 Cargar historial de mensajes
-app.get("/memory/load/:conversation_id", async (req, res) => {
-  const { conversation_id } = req.params;
-
+// 🧩 Endpoint: crear conversación
+app.post("/api/conversations", async (req, res) => {
+  const { title } = req.body;
   try {
     const result = await pool.query(
-      `SELECT role, content, created_at
-       FROM conversations
-       WHERE conversation_id = $1
-       ORDER BY created_at ASC`,
-      [conversation_id]
+      "INSERT INTO fulltechuiconversation (title) VALUES ($1) RETURNING *",
+      [title || "Nueva conversación"]
     );
-
-    res.json({ ok: true, messages: result.rows });
-  } catch (err) {
-    console.error("❌ Error al cargar mensajes:", err);
-    res.status(500).json({ error: err.message });
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("⚠️ Error al crear conversación:", error);
+    res.status(500).json({ error: "Error al crear conversación" });
   }
 });
 
-// 🧹 Limpiar memoria (opcional)
-app.delete("/memory/clear/:conversation_id", async (req, res) => {
+// 🧩 Endpoint: guardar mensaje
+app.post("/api/messages", async (req, res) => {
+  const { conversation_id, role, content } = req.body;
+  try {
+    await pool.query(
+      "INSERT INTO fulltechuimensage (conversation_id, role, content) VALUES ($1, $2, $3)",
+      [conversation_id, role, content]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error("⚠️ Error al guardar mensaje:", error);
+    res.status(500).json({ error: "Error al guardar mensaje" });
+  }
+});
+
+// 🧩 Endpoint: obtener mensajes por conversación
+app.get("/api/messages/:conversation_id", async (req, res) => {
   const { conversation_id } = req.params;
   try {
-    await pool.query(`DELETE FROM conversations WHERE conversation_id = $1`, [
-      conversation_id,
-    ]);
-    res.json({ ok: true, msg: "🧹 Memoria eliminada correctamente" });
-  } catch (err) {
-    console.error("❌ Error al limpiar memoria:", err);
-    res.status(500).json({ error: err.message });
+    const result = await pool.query(
+      "SELECT * FROM fulltechuimensage WHERE conversation_id = $1 ORDER BY created_at ASC",
+      [conversation_id]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error("⚠️ Error al obtener mensajes:", error);
+    res.status(500).json({ error: "Error al obtener mensajes" });
   }
 });
 
 // 🚀 Iniciar servidor
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Servidor corriendo en puerto ${PORT}`));
+app.listen(PORT, async () => {
+  await ensureTables();
+  console.log(`✅ Servidor corriendo en puerto ${PORT}`);
+});
